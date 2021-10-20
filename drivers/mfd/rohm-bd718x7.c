@@ -9,6 +9,8 @@
 
 #include <linux/gpio_keys.h>
 #include <linux/i2c.h>
+#include <linux/of_platform.h>
+#include <linux/clk.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/mfd/rohm-bd718x7.h>
@@ -22,6 +24,7 @@ static struct gpio_keys_button button = {
 	.code = KEY_POWER,
 	.gpio = -1,
 	.type = EV_KEY,
+	.wakeup = 1,
 };
 
 static struct gpio_keys_platform_data bd718xx_powerkey_data = {
@@ -122,6 +125,12 @@ static int bd718xx_init_press_duration(struct regmap *regmap,
 			return ret;
 		}
 	}
+
+        unsigned int keycode;
+        ret = of_property_read_u32(dev->of_node, "rohm,button-keycode", &keycode);
+        if (!ret) {
+                button.code = keycode;
+        }
 
 	return 0;
 }
