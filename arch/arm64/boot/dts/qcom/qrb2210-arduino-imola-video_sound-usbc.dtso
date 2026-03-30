@@ -41,7 +41,7 @@
 
 &sound {
 
-	hdmi-i2s-dai-link {
+	mm4-hdmi-i2s-dai-link {
 		link-name = "HDMI/I2S Playback";
 
 		cpu {

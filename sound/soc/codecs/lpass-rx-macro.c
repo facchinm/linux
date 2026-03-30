@@ -8,6 +8,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
+#include <linux/mutex.h>
 #include <sound/soc.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -666,6 +667,7 @@ struct rx_macro {
 	struct clk *dcodec;
 	struct clk *fsgen;
 	struct clk_hw hw;
+	struct mutex lock;
 };
 #define to_rx_macro(_hw) container_of(_hw, struct rx_macro, hw)
 
@@ -2458,8 +2460,11 @@ static int rx_macro_mux_get(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *component = snd_soc_dapm_to_component(widget->dapm);
 	struct rx_macro *rx = snd_soc_component_get_drvdata(component);
 
+	mutex_lock(&rx->lock);
+
 	ucontrol->value.enumerated.item[0] =
 			rx->rx_port_value[widget->shift];
+	mutex_unlock(&rx->lock);
 	return 0;
 }
 
@@ -2475,12 +2480,17 @@ static int rx_macro_mux_put(struct snd_kcontrol *kcontrol,
 	u32 aif_rst;
 	struct rx_macro *rx = snd_soc_component_get_drvdata(component);
 
+	mutex_lock(&rx->lock);
+
 	aif_rst = rx->rx_port_value[widget->shift];
 	if (!rx_port_value) {
-		if (aif_rst == 0)
+		if (aif_rst == 0) {
+			mutex_unlock(&rx->lock);
 			return 0;
+		}
 		if (aif_rst > RX_MACRO_AIF4_PB) {
 			dev_err(component->dev, "%s: Invalid AIF reset\n", __func__);
+			mutex_unlock(&rx->lock);
 			return 0;
 		}
 	}
@@ -2520,8 +2530,10 @@ static int rx_macro_mux_put(struct snd_kcontrol *kcontrol,
 
 	snd_soc_dapm_mux_update_power(widget->dapm, kcontrol,
 					rx_port_value, e, update);
+	mutex_unlock(&rx->lock);
 	return 0;
 err:
+	mutex_unlock(&rx->lock);
 	return -EINVAL;
 }
 
@@ -3914,6 +3926,8 @@ static int rx_macro_probe(struct platform_device *pdev)
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
+
+	mutex_init(&rx->lock);
 
 	ret = rx_macro_register_mclk_output(rx);
 	if (ret)

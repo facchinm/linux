@@ -431,7 +431,9 @@ static int __q6asm_memory_map_regions(struct audio_client *ac, int dir,
 	void *p __free(kfree) = NULL;
 	unsigned long flags;
 	uint32_t num_regions, buf_sz;
-	int i, pkt_size;
+	int i, pkt_size, ret;
+
+	spin_lock_irqsave(&ac->lock, flags);
 
 	if (is_contiguous) {
 		num_regions = 1;
@@ -448,8 +450,10 @@ static int __q6asm_memory_map_regions(struct audio_client *ac, int dir,
 		   (sizeof(*mregions) * num_regions);
 
 	p = kzalloc(pkt_size, GFP_KERNEL);
-	if (!p)
+	if (!p) {
+		spin_unlock_irqrestore(&ac->lock, flags);
 		return -ENOMEM;
+	}
 
 	pkt = p;
 	cmd = p + APR_HDR_SIZE;
@@ -466,7 +470,6 @@ static int __q6asm_memory_map_regions(struct audio_client *ac, int dir,
 	cmd->num_regions = num_regions;
 	cmd->property_flag = 0x00;
 
-	spin_lock_irqsave(&ac->lock, flags);
 	port = &ac->port[dir];
 
 	for (i = 0; i < num_regions; i++) {

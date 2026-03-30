@@ -7,8 +7,52 @@
 #include <sound/jack.h>
 #include <linux/input-event-codes.h>
 #include "common.h"
+#include <linux/sort.h>
 
 #define NAME_SIZE	32
+
+static int qcom_np_name_cmp(const void *a, const void *b)
+{
+    const struct device_node * const *na = a;
+    const struct device_node * const *nb = b;
+
+    return strcmp((*na)->name, (*nb)->name);
+}
+
+static bool qcom_link_is_backend(struct device_node *np)
+{
+    struct device_node *codec;
+    bool is_backend;
+
+    codec = of_get_child_by_name(np, "codec");
+    is_backend = !!codec;
+    of_node_put(codec);
+
+    return is_backend;
+}
+
+static int qcom_collect_sorted_children(struct device *dev,
+                    struct device_node ***children,
+                    int *count)
+{
+    struct device_node **arr;
+    struct device_node *np;
+    int num, i = 0;
+
+    num = of_get_available_child_count(dev->of_node);
+    arr = kcalloc(num, sizeof(*arr), GFP_KERNEL);
+    if (!arr)
+        return -ENOMEM;
+
+    for_each_available_child_of_node(dev->of_node, np)
+        arr[i++] = of_node_get(np);
+
+    sort(arr, i, sizeof(*arr), qcom_np_name_cmp, NULL);
+
+    *children = arr;
+    *count = i;
+    return 0;
+}
 
 static const struct snd_soc_dapm_widget qcom_jack_snd_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
@@ -184,6 +228,8 @@ int qcom_snd_parse_of(struct snd_soc_card *card)
 			continue;
 		}
 
+		dev_err(dev, "(1) Parsing dai_link %s\n", np->name);
+
 		ret = qcom_snd_setup_dai_links(card, link, np);
 		if (ret)
 			return ret;
@@ -192,22 +238,32 @@ int qcom_snd_parse_of(struct snd_soc_card *card)
 	}
 
 	/* setup backend dais */
-	for_each_available_child_of_node(dev->of_node, np) {
-		codec = of_get_child_by_name(np, "codec");
-		if (!codec)
-			continue;
+	struct device_node **children = NULL;
+    int child_count = 0;
+	int i;
 
-		ret = qcom_snd_setup_dai_links(card, link, np);
-		if (ret)
-			return ret;
+	ret = qcom_collect_sorted_children(dev, &children, &child_count);
+	for (i = 0; i < child_count; i++) {
+        if (!qcom_link_is_backend(children[i]))
+            continue;
 
-		link++;
-	}
+		dev_err(dev, "(2) Parsing dai_link %s\n", children[i]->name);
+
+        ret = qcom_snd_setup_dai_links(card, link, of_node_get(children[i]));
+        if (ret)
+            goto out_put_children;
+        link++;
+    }
 
 	if (!card->dapm_widgets) {
 		card->dapm_widgets = qcom_jack_snd_widgets;
 		card->num_dapm_widgets = ARRAY_SIZE(qcom_jack_snd_widgets);
 	}
+
+out_put_children:
+	for (i = 0; i < child_count; i++)
+		of_node_put(children[i]);
+	kfree(children);
 
 	return ret;
 }

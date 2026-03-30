@@ -729,6 +729,15 @@
 					bias-disable;
 					drive-strength = <8>;
 				};
+
+				/* FIXME: move to separate group, also board-specific, so move to qrb2210 */
+				wsa-mclk-pins {
+					pins = "gpio18";
+					function = "wsa_mclk";
+					bias-disable;
+					drive-strength = <16>;
+					output-high;
+				};
 			};
 
 			lpass_tx_swr_active: lpass-tx-swr-active-state {

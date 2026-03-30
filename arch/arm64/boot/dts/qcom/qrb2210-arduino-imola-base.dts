@@ -149,7 +149,7 @@
 			};
 		};
 
-		hph-playback-dai-link {
+		mm1-hph-playback-dai-link {
 			link-name = "HPH Playback";
 			cpu {
 				sound-dai = <&q6afedai RX_CODEC_DMA_RX_0>;
@@ -164,7 +164,7 @@
 			};
 		};
 
-		lo-playback-dai-link {
+		mm2-lo-playback-dai-link {
 			link-name = "LO Playback";
 			cpu {
 				sound-dai = <&q6afedai RX_CODEC_DMA_RX_0>;
@@ -179,22 +179,7 @@
 			};
 		};
 
-		ear-playback-dai-link {
-			link-name = "Ear Playback";
-			cpu {
-				sound-dai = <&q6afedai RX_CODEC_DMA_RX_0>;
-			};
-
-			platform {
-				sound-dai = <&q6routing>;
-			};
-
-			codec {
-				sound-dai = <&pmic4125_codec 0>, <&swr1 0>, <&rxmacro 0>;
-			};
-		};
-
-		hph-capture-dai-link {
+		mm3-hph-capture-dai-link {
 			link-name = "HP Capture";
 			cpu {
 				sound-dai = <&q6afedai TX_CODEC_DMA_TX_3>;
