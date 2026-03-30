@@ -16,7 +16,7 @@
 #include "usb_offload_utils.h"
 #include "sdw.h"
 
-#define MI2S_BCLK_RATE		1536000
+#define MI2S_BCLK_RATE		3072000
 
 struct sm8250_snd_data {
 	bool stream_prepared[AFE_PORT_MAX];

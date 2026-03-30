@@ -1502,7 +1502,7 @@ int q6afe_i2s_port_prepare(struct q6afe_port *port, struct q6afe_i2s_cfg *cfg)
 
 	pcfg->i2s_cfg.i2s_cfg_minor_version = AFE_API_VERSION_I2S_CONFIG;
 	pcfg->i2s_cfg.sample_rate = cfg->sample_rate;
-	pcfg->i2s_cfg.bit_width = cfg->bit_width;
+	pcfg->i2s_cfg.bit_width = 32; //cfg->bit_width;
 	pcfg->i2s_cfg.data_format = AFE_LINEAR_PCM_DATA;
 
 	switch (cfg->fmt & SND_SOC_DAIFMT_CLOCK_PROVIDER_MASK) {

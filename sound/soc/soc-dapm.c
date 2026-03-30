@@ -2235,11 +2235,17 @@ static int dapm_power_widgets(struct snd_soc_card *card, int event,
 	enum snd_soc_bias_level bias;
 	int ret;
 
+	dev_err(card->dev, "ASoC: Starting DAPM sequencing for event %d, card %p, update %p\
+		dapm %p\n", event, card, update, dapm);
+
 	snd_soc_dapm_mutex_assert_held(card);
 
 	trace_snd_soc_dapm_start(card, event);
 
 	for_each_card_dapms(card, d) {
+		dev_err(card->dev,
+			"%s: trying snd_soc_dapm_get_idle_bias: %p\n",
+			__func__, d);
 		if (snd_soc_dapm_get_idle_bias(d))
 			d->target_bias_level = SND_SOC_BIAS_STANDBY;
 		else
@@ -2303,12 +2309,17 @@ static int dapm_power_widgets(struct snd_soc_card *card, int event,
 	 * they're not ground referenced.
 	 */
 	bias = SND_SOC_BIAS_OFF;
-	for_each_card_dapms(card, d)
+	for_each_card_dapms(card, d) {
 		if (d->target_bias_level > bias)
 			bias = d->target_bias_level;
-	for_each_card_dapms(card, d)
+	}
+	for_each_card_dapms(card, d) {
+		dev_err(card->dev,
+			"%s: trying snd_soc_dapm_get_idle_bias (2): %p\n",
+			__func__, d);
 		if (snd_soc_dapm_get_idle_bias(d))
 			d->target_bias_level = bias;
+	}
 
 	trace_snd_soc_dapm_walk_done(card);
 
