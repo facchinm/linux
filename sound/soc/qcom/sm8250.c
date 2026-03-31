@@ -78,6 +78,7 @@ static int sm8250_snd_startup(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
 	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
+	struct sm8250_snd_data *data = snd_soc_card_get_drvdata(rtd->card);
 
 	switch (cpu_dai->id) {
 	case PRIMARY_MI2S_RX:
@@ -108,7 +109,8 @@ static int sm8250_snd_startup(struct snd_pcm_substream *substream)
 		break;
 	}
 
-	return qcom_snd_sdw_startup(substream);
+	int ret = qcom_snd_sdw_startup(substream);
+	return ret;
 }
 
 static int sm8250_snd_prepare(struct snd_pcm_substream *substream)
@@ -117,7 +119,8 @@ static int sm8250_snd_prepare(struct snd_pcm_substream *substream)
 	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct sm8250_snd_data *data = snd_soc_card_get_drvdata(rtd->card);
 
-	return qcom_snd_sdw_prepare(substream, &data->stream_prepared[cpu_dai->id]);
+	int ret = qcom_snd_sdw_prepare(substream, &data->stream_prepared[cpu_dai->id]);
+	return ret;
 }
 
 static int sm8250_snd_hw_free(struct snd_pcm_substream *substream)
@@ -126,7 +129,8 @@ static int sm8250_snd_hw_free(struct snd_pcm_substream *substream)
 	struct sm8250_snd_data *data = snd_soc_card_get_drvdata(rtd->card);
 	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 
-	return qcom_snd_sdw_hw_free(substream, &data->stream_prepared[cpu_dai->id]);
+	int ret = qcom_snd_sdw_hw_free(substream, &data->stream_prepared[cpu_dai->id]);
+	return ret;
 }
 
 static const struct snd_soc_ops sm8250_be_ops = {
@@ -141,6 +145,8 @@ static void sm8250_add_be_ops(struct snd_soc_card *card)
 	struct snd_soc_dai_link *link;
 	int i;
 
+	struct sm8250_snd_data *data = snd_soc_card_get_drvdata(card);
+
 	for_each_card_prelinks(card, i, link) {
 		if (link->no_pcm == 1) {
 			link->init = sm8250_snd_init;
@@ -151,12 +157,15 @@ static void sm8250_add_be_ops(struct snd_soc_card *card)
 	}
 }
 
+static int howmany = 0;
 static int sm8250_platform_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card;
 	struct sm8250_snd_data *data;
 	struct device *dev = &pdev->dev;
 	int ret;
+
+	dev_err(dev, "%s: probe called %d times\n", __func__, ++howmany);
 
 	card = devm_kzalloc(dev, sizeof(*card), GFP_KERNEL);
 	if (!card)
@@ -172,12 +181,17 @@ static int sm8250_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(dev, card);
 	snd_soc_card_set_drvdata(card, data);
 	ret = qcom_snd_parse_of(card);
-	if (ret)
+	if (ret) {
+		devm_kfree(dev, card);
+		devm_kfree(dev, data);
+		howmany--;
 		return ret;
+	}
 
 	card->driver_name = of_device_get_match_data(dev);
 	sm8250_add_be_ops(card);
-	return devm_snd_soc_register_card(dev, card);
+	ret = devm_snd_soc_register_card(dev, card);
+	return ret;
 }
 
 static const struct of_device_id snd_sm8250_dt_match[] = {
