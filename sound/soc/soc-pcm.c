@@ -1335,7 +1335,7 @@ static int dpcm_be_connect(struct snd_soc_pcm_runtime *fe,
 	list_add(&dpcm->list_fe, &be->dpcm[stream].fe_clients);
 	snd_pcm_stream_unlock_irq(fe_substream);
 
-	dev_dbg(fe->dev, "connected new DPCM %s path %s %s %s\n",
+	dev_err(fe->dev, "connected new DPCM %s path %s %s %s\n",
 			snd_pcm_direction_name(stream),  fe->dai_link->name,
 			stream ? "<-" : "->", be->dai_link->name);
 

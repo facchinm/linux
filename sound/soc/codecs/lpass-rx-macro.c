@@ -1689,7 +1689,13 @@ static int rx_macro_int_dem_inp_mux_put(struct snd_kcontrol *kcontrol,
 	struct rx_macro *rx = snd_soc_component_get_drvdata(component);
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	unsigned short look_ahead_dly_reg;
-	unsigned int val;
+	unsigned int val, ret;
+
+	mutex_lock(&rx->lock);
+
+	dev_err(component->dev,
+			"%s: initial rx_macro_int_dem_inp_mux_put\n",
+			__func__);
 
 	val = ucontrol->value.enumerated.item[0];
 
@@ -1707,7 +1713,9 @@ static int rx_macro_int_dem_inp_mux_put(struct snd_kcontrol *kcontrol,
 		snd_soc_component_update_bits(component, look_ahead_dly_reg,
 					      CDC_RX_DLY_ZN_EN_MASK, 0);
 	/* Set DEM INP Select */
-	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
+	ret = snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
+	mutex_unlock(&rx->lock);
+	return ret;
 }
 
 static const struct snd_kcontrol_new rx_int0_dem_inp_mux =
@@ -2471,8 +2479,20 @@ static int rx_macro_mux_get(struct snd_kcontrol *kcontrol,
 static int rx_macro_mux_put(struct snd_kcontrol *kcontrol,
 			    struct snd_ctl_elem_value *ucontrol)
 {
+
+	printk("%s: initial rx_macro_mux_put %p\n",
+			__func__, kcontrol);
+
 	struct snd_soc_dapm_widget *widget = snd_soc_dapm_kcontrol_to_widget(kcontrol);
+
+	printk("%s: initial rx_macro_mux_put %p\n",
+			__func__, widget);
+
 	struct snd_soc_component *component = snd_soc_dapm_to_component(widget->dapm);
+
+	printk("%s: initial rx_macro_mux_put %p\n",
+			__func__, component);
+
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	struct snd_soc_dapm_update *update = NULL;
 	u32 rx_port_value = ucontrol->value.enumerated.item[0];
@@ -2480,7 +2500,14 @@ static int rx_macro_mux_put(struct snd_kcontrol *kcontrol,
 	u32 aif_rst;
 	struct rx_macro *rx = snd_soc_component_get_drvdata(component);
 
+	printk("%s: initial rx_macro_mux_put %p\n",
+			__func__, rx);
+
 	mutex_lock(&rx->lock);
+
+	dev_err(component->dev,
+		"%s: initial rx_macro_mux_put %d\n",
+		__func__, rx_port_value);
 
 	aif_rst = rx->rx_port_value[widget->shift];
 	if (!rx_port_value) {

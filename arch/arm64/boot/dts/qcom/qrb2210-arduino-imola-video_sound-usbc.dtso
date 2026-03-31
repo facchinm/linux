@@ -40,9 +40,11 @@
 };
 
 &sound {
+	pinctrl-0 = <&lpi_i2s2_active>;
+	pinctrl-names = "default";
 
 	mm4-hdmi-i2s-dai-link {
-		link-name = "HDMI/I2S Playback";
+		link-name = "HDMI Playback";
 
 		cpu {
 			sound-dai = <&q6afedai SECONDARY_MI2S_RX>;

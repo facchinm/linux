@@ -285,6 +285,7 @@ struct tx_macro {
 	int dec_mode[NUM_DECIMATORS];
 	struct lpass_macro *pds;
 	bool bcs_clk_en;
+	struct mutex lock;
 };
 #define to_tx_macro(_hw) container_of(_hw, struct tx_macro, hw)
 
@@ -866,11 +867,13 @@ static int tx_macro_tx_mixer_get(struct snd_kcontrol *kcontrol,
 	u32 dec_id = mc->shift;
 	struct tx_macro *tx = snd_soc_component_get_drvdata(component);
 
+	mutex_lock(&tx->lock);
 	if (test_bit(dec_id, &tx->active_ch_mask[dai_id]))
 		ucontrol->value.integer.value[0] = 1;
 	else
 		ucontrol->value.integer.value[0] = 0;
 
+	mutex_unlock(&tx->lock);
 	return 0;
 }
 
@@ -885,25 +888,37 @@ static int tx_macro_tx_mixer_put(struct snd_kcontrol *kcontrol,
 	u32 dec_id = mc->shift;
 	u32 enable = ucontrol->value.integer.value[0];
 	struct tx_macro *tx = snd_soc_component_get_drvdata(component);
+	int ret = 1;
+
+	mutex_lock(&tx->lock);
+
+	dev_err(component->dev,
+			"%s: initial tx_macro_tx_mixer_put\n",
+			__func__);
 
 	if (enable) {
-		if (tx->active_decimator[dai_id] == dec_id)
-			return 0;
+		if (tx->active_decimator[dai_id] == dec_id) {
+			ret = 0;
+			goto out;
+		}
 
 		set_bit(dec_id, &tx->active_ch_mask[dai_id]);
 		tx->active_ch_cnt[dai_id]++;
 		tx->active_decimator[dai_id] = dec_id;
 	} else {
-		if (tx->active_decimator[dai_id] == -1)
-			return 0;
-
+		if (tx->active_decimator[dai_id] == -1) {
+			ret = 0;
+			goto out;
+		}
 		tx->active_ch_cnt[dai_id]--;
 		clear_bit(dec_id, &tx->active_ch_mask[dai_id]);
 		tx->active_decimator[dai_id] = -1;
 	}
 	snd_soc_dapm_mixer_update_power(widget->dapm, kcontrol, enable, update);
 
-	return 1;
+out:
+	mutex_unlock(&tx->lock);
+	return ret;
 }
 
 static int tx_macro_enable_dec(struct snd_soc_dapm_widget *w,
@@ -2363,6 +2378,8 @@ static int tx_macro_probe(struct platform_device *pdev)
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
+
+	mutex_init(&tx->lock);
 
 	ret = tx_macro_register_mclk_output(tx);
 	if (ret)

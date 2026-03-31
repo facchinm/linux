@@ -165,7 +165,7 @@ static int sm8250_platform_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int ret;
 
-	dev_err(dev, "%s: probe called %d times\n", __func__, ++howmany);
+	dev_err(dev, "%s: probe called %d times, pdev=%p\n", __func__, ++howmany, pdev);
 
 	card = devm_kzalloc(dev, sizeof(*card), GFP_KERNEL);
 	if (!card)
@@ -182,6 +182,7 @@ static int sm8250_platform_probe(struct platform_device *pdev)
 	snd_soc_card_set_drvdata(card, data);
 	ret = qcom_snd_parse_of(card);
 	if (ret) {
+		dev_err(dev, "%s: failed to parse DT: %d\n", __func__, ret);
 		devm_kfree(dev, card);
 		devm_kfree(dev, data);
 		howmany--;

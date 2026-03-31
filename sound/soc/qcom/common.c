@@ -212,11 +212,6 @@ int qcom_snd_parse_of(struct snd_soc_card *card)
 	/* Populate links */
 	num_links = of_get_available_child_count(dev->of_node);
 
-	if (num_links == 1) {
-		dev_err(dev, "Waiting for dais\n");
-		return -EPROBE_DEFER;
-	}
-
 	/* Allocate the DAI link array */
 	card->dai_link = devm_kcalloc(dev, num_links, sizeof(*link), GFP_KERNEL);
 	if (!card->dai_link)
@@ -236,8 +231,11 @@ int qcom_snd_parse_of(struct snd_soc_card *card)
 		dev_err(dev, "(1) Parsing dai_link %s\n", np->name);
 
 		ret = qcom_snd_setup_dai_links(card, link, np);
-		if (ret)
+		if (ret) {
+			dev_err(dev, "(1) Failed to setup dai_link %s: %d\n", np->name, ret);
+			devm_kfree(dev, card->dai_link);
 			return ret;
+		}
 
 		link++;
 	}

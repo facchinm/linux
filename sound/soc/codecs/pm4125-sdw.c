@@ -23,6 +23,8 @@
 static struct wcd_sdw_ch_info pm4125_sdw_rx_ch_info[] = {
 	WCD_SDW_CH(PM4125_HPH_L, PM4125_HPH_PORT, BIT(0)),
 	WCD_SDW_CH(PM4125_HPH_R, PM4125_HPH_PORT, BIT(1)),
+	WCD_SDW_CH(PM4125_COMP_L, PM4125_COMP_PORT, BIT(0)),
+	WCD_SDW_CH(PM4125_COMP_R, PM4125_COMP_PORT, BIT(1)),
 };
 
 static struct wcd_sdw_ch_info pm4125_sdw_tx_ch_info[] = {
@@ -386,16 +388,20 @@ static int pm4125_probe(struct sdw_slave *pdev, const struct sdw_device_id *id)
 		master_ch_mask_size = of_property_count_u8_elems(dev->of_node,
 								 "qcom,tx-channel-mapping");
 
-		if (master_ch_mask_size)
+		if (master_ch_mask_size > 0)
 			ret = of_property_read_u8_array(dev->of_node, "qcom,tx-channel-mapping",
 							master_ch_mask, master_ch_mask_size);
+		else
+			master_ch_mask_size = 0;
 	} else {
 		master_ch_mask_size = of_property_count_u8_elems(dev->of_node,
 								 "qcom,rx-channel-mapping");
 
-		if (master_ch_mask_size)
+		if (master_ch_mask_size > 0)
 			ret = of_property_read_u8_array(dev->of_node, "qcom,rx-channel-mapping",
 							master_ch_mask, master_ch_mask_size);
+		else
+			master_ch_mask_size = 0;
 	}
 
 	if (ret < 0)
@@ -405,6 +411,9 @@ static int pm4125_probe(struct sdw_slave *pdev, const struct sdw_device_id *id)
 		pdev->prop.source_ports = GENMASK(PM4125_MAX_TX_SWR_PORTS, 0);
 		pdev->prop.src_dpn_prop = pm4125_dpn_prop;
 		priv->ch_info = &pm4125_sdw_tx_ch_info[0];
+
+		if (master_ch_mask_size > ARRAY_SIZE(pm4125_sdw_tx_ch_info))
+			master_ch_mask_size = ARRAY_SIZE(pm4125_sdw_tx_ch_info);
 
 		for (i = 0; i < master_ch_mask_size; i++)
 			priv->ch_info[i].master_ch_mask = PM4125_SWRM_CH_MASK(master_ch_mask[i]);
@@ -421,6 +430,9 @@ static int pm4125_probe(struct sdw_slave *pdev, const struct sdw_device_id *id)
 		pdev->prop.sink_ports = GENMASK(PM4125_MAX_SWR_PORTS - 1, 0);
 		pdev->prop.sink_dpn_prop = pm4125_dpn_prop;
 		priv->ch_info = &pm4125_sdw_rx_ch_info[0];
+
+		if (master_ch_mask_size > ARRAY_SIZE(pm4125_sdw_rx_ch_info))
+			master_ch_mask_size = ARRAY_SIZE(pm4125_sdw_rx_ch_info);
 
 		for (i = 0; i < master_ch_mask_size; i++)
 			priv->ch_info[i].master_ch_mask = PM4125_SWRM_CH_MASK(master_ch_mask[i]);

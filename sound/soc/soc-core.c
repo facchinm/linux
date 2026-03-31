@@ -1651,6 +1651,8 @@ static int soc_probe_component(struct snd_soc_card *card,
 		}
 	}
 
+	printk("ASoC: DAPM initialized for component %s %p, card %s %p\n", component->name, dapm, card->name, card);
+
 	ret = snd_soc_component_probe(component);
 	if (ret < 0)
 		goto err_probe;

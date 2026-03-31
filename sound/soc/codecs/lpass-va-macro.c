@@ -209,7 +209,7 @@ struct va_macro {
 	u16 dmic_clk_div;
 	bool has_swr_master;
 	bool has_npl_clk;
-
+	struct mutex lock;
 	int dec_mode[VA_MACRO_NUM_DECIMATORS];
 	struct regmap *regmap;
 	struct clk *mclk;
@@ -572,11 +572,14 @@ static int va_macro_tx_mixer_get(struct snd_kcontrol *kcontrol,
 	u32 dec_id = mc->shift;
 	struct va_macro *va = snd_soc_component_get_drvdata(component);
 
+	mutex_lock(&va->lock);
+
 	if (test_bit(dec_id, &va->active_ch_mask[dai_id]))
 		ucontrol->value.integer.value[0] = 1;
 	else
 		ucontrol->value.integer.value[0] = 0;
 
+	mutex_unlock(&va->lock);
 	return 0;
 }
 
@@ -594,6 +597,12 @@ static int va_macro_tx_mixer_put(struct snd_kcontrol *kcontrol,
 	u32 enable = ucontrol->value.integer.value[0];
 	struct va_macro *va = snd_soc_component_get_drvdata(component);
 
+	mutex_lock(&va->lock);
+
+	dev_err(component->dev,
+			"%s: initial va_macro_tx_mixer_put\n",
+			__func__);
+
 	if (enable) {
 		set_bit(dec_id, &va->active_ch_mask[dai_id]);
 		va->active_ch_cnt[dai_id]++;
@@ -603,6 +612,7 @@ static int va_macro_tx_mixer_put(struct snd_kcontrol *kcontrol,
 	}
 
 	snd_soc_dapm_mixer_update_power(widget->dapm, kcontrol, enable, update);
+	mutex_unlock(&va->lock);
 
 	return 0;
 }
@@ -1666,6 +1676,8 @@ static int va_macro_probe(struct platform_device *pdev)
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
+
+	mutex_init(&va->lock);
 
 	ret = va_macro_register_fsgen_output(va);
 	if (ret)

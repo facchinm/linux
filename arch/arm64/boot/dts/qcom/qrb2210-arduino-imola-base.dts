@@ -220,6 +220,17 @@
 		regulator-boot-on;
 	};
 
+	vreg_adsp_cx_delay: regulator-adsp-cx-delay {
+		/* Fake supply used to delay ADSP start-up */
+		compatible = "regulator-fixed";
+		regulator-name = "adsp-cx-delay";
+		regulator-min-microvolt = <1352000>;
+		regulator-max-microvolt = <1352000>;
+		startup-delay-us = <10000000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
 	/* PM4125 charger out, supplied by VBAT */
 	vph_pwr: regulator-vph-pwr {
 		compatible = "regulator-fixed";
